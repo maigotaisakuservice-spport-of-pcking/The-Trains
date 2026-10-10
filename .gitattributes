@@ -1,0 +1,13 @@
+# Auto detect text files and perform LF normalization
+* text=auto eol=lf
+
+# Explicitly set binary files
+*.png binary
+*.jpg binary
+*.wav binary
+*.mp3 binary
+*.ogg binary
+*.fbx binary
+*.obj binary
+*.gltf binary
+*.glb binary
