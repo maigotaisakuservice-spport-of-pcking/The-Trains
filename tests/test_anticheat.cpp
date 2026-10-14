@@ -8,34 +8,39 @@ using namespace the_stations;
 int main() {
     EscapeAndAntiCheatEngine engine;
 
-    // Create a temporary test binary file on disk
-    std::string testFilePath = "test_binary.bin";
+    // 1. Create mock binary file
+    std::string binPath = "mock_game_binary.exe";
     {
-        std::ofstream outFile(testFilePath, std::ios::binary);
-        outFile << "THE_STATIONS_PRODUCTION_BINARY_PAYLOAD_DATA_2026";
+        std::ofstream file(binPath, std::ios::binary);
+        file << "ORIGINAL_GAME_BINARY_PAYLOAD_3D_ENGINE_2026";
     }
 
-    // Compute hash
-    std::string calculatedHash = engine.computeFileSHA256(testFilePath);
-    assert(!calculatedHash.empty());
+    // Compute legitimate SHA256
+    std::string originalHash = engine.computeFileSHA256(binPath);
+    assert(!originalHash.empty());
 
-    // Verify valid SHA256 file check
-    bool isValid = engine.verifyExecutableFileSHA256(testFilePath, calculatedHash);
-    assert(isValid);
+    // Verify legitimate check passes
+    bool passVal = engine.verifyExecutableFileSHA256(binPath, originalHash);
+    assert(passVal);
     assert(!engine.isTrappedUser());
 
-    // Verify tampered hash sets m_isTrappedUser flag
-    bool isTampered = engine.verifyExecutableFileSHA256(testFilePath, "INCORRECT_HASH_9999");
-    assert(!isTampered);
+    // 2. Intentional binary tampering test
+    {
+        std::ofstream file(binPath, std::ios::binary);
+        file << "CRACKED_TAMPERED_GAME_BINARY_PAYLOAD_3D_ENGINE_2026";
+    }
+
+    // Verify tampered check fails and sets g_IsTrappedUser = true
+    bool failVal = engine.verifyExecutableFileSHA256(binPath, originalHash);
+    assert(!failVal);
     assert(engine.isTrappedUser());
 
-    // Verify Trap B / Trap C trigger selection
-    AntiCheatTrapType trap = engine.triggerTrappedUserTrap(12345);
+    // Verify random Trap B or Trap C selection
+    AntiCheatTrapType trap = engine.triggerTrappedUserTrap(777);
     assert(trap == AntiCheatTrapType::TrapB_InstantDeathLoop || trap == AntiCheatTrapType::TrapC_InfiniteLoop);
 
-    // Cleanup
-    std::remove(testFilePath.c_str());
+    std::remove(binPath.c_str());
 
-    std::cout << "[PASS] Production Anti-Cheat File Binary Verification Test" << std::endl;
+    std::cout << "[PASS] Anti-Cheat Tampering & Trap Trigger Verification Test" << std::endl;
     return 0;
 }

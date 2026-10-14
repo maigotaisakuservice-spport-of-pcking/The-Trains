@@ -9,42 +9,38 @@
 本作「The Stations」は、「日常にある何の変哲もない無人駅」×「時空のねじれ」を一人称視点（1P）で体験するリアルホラーゲームです。
 HUD非表示（0%）による没入感と、プレイヤーの生体＆行動データ（恐怖度スコア）を用いたプロシージャルレベル生成、時空の不可逆性（ドアを閉めると元の空間がメモリから破棄され絶対に戻れない構造）、EOS（Epic Online Services）を用いた全プラットフォーム（Windows / macOS / Android）クロスプレイ対応を特徴としています。
 
-### ディレクトリ構成 (全OS共通)
+### ディレクトリ構成 & ビルド成果物配置 (Release/)
 ```
 TheStations/
-├── CMakeLists.txt                 # C++20 クロスプラットフォームビルドスクリプト (CTest自動テスト連携)
-├── .gitignore                     # C++ / CMake 用ビルド成果物排除設定
-├── .gitattributes                 # LF改行コード正規化およびバイナリアセット設定
-├── .github/
-│   └── workflows/
-│       └── build_and_test.yml     # GitHub Actions (Windows/Mac/Ubuntu) CI/CD 自動ビルドパイプライン
+├── CMakeLists.txt                 # C++20 クロスプラットフォームビルドスクリプト (Release/ 出力パス強制設定)
+├── Release/                       # 【厳格ビルド成果物出力ディレクトリ】
+│   ├── windows/                   # TheStations.exe (Windows 64bit)
+│   ├── mac/                       # TheStationsApp (macOS Mach-O バンドル)
+│   └── android/                   # TheStations (Android NDK バイナリ)
 ├── src/
 │   ├── main.cpp                   # メインエントリポイント
 │   ├── shared/                    # 全OS共通共有コアエンジン logic
 │   │   ├── types.hpp              # 共通型定義
 │   │   ├── platform_interface.hpp # OS抽象化インターフェース
+│   │   ├── graphics/              # プロシージャルテクスチャ生成 (コンクリート汚れ・血痕タイル・フィルムグレイン)
+│   │   ├── audio/                 # プロシージャルオーディオDSP合成 (電車ドップラー・風のうねり・アナウンスチャイムPCM)
 │   │   ├── ui/                    # UI / 画面ステートマシン (HUDレス設計)
 │   │   ├── level/                 # プロシージャルレベル生成 & 空間不可逆性ロジック (50種ステーション)
 │   │   ├── biometric/             # 生体認証 & 行動DDAアナライザ (ローカルRAM完結)
 │   │   ├── network/               # EOS P2P ネットワーク & 5桁ロビーマッチング
 │   │   ├── entity/                # エンティティAI & 10分間隠しタイマー & アナウンスギミック
 │   │   └── anticheat/             # FIPS 180-2 SHA256 バイナリ検証 & 海賊版報復トラップエンジン (案B/案C)
-│   ├── windows/                   # Windows native (Steam API / Win32)
-│   ├── mac/                       # macOS native (Apple Metal / POSIX)
-│   └── android/                   # Android native (JNI / NDK)
-├── assets/                        # プレースホルダーアセットディレクトリ
-│   ├── models/
-│   ├── sounds/
-│   └── textures/
-├── tests/                         # ユニット & 統合テストスイート (CTest)
-│   ├── CMakeLists.txt
+│   ├── windows/                   # Windows native
+│   ├── mac/                       # macOS native
+│   └── android/                   # Android native
+├── tests/                         # 厳格ユニットテストスイート (CTest)
 │   ├── test_sanity.cpp
 │   ├── test_ui.cpp
-│   ├── test_level.cpp
-│   ├── test_biometric.cpp
-│   ├── test_eos.cpp
-│   ├── test_entity.cpp
-│   └── test_anticheat.cpp
+│   ├── test_level.cpp             # レベル生成決定性＆空間破棄検証
+│   ├── test_biometric.cpp         # DDA権限拒否フォールバック検証
+│   ├── test_eos.cpp               # 5桁ルームコード衝突耐性＆P2P検証
+│   ├── test_entity.cpp            # AI状態遷移＆10分タイマー検証
+│   └── test_anticheat.cpp         # 改ざん検知＆トラップ起動検証
 └── docs/                          # 開発者ドキュメント
     ├── README.md                  # 本仕様・実装完了報告書 (日本語)
     ├── setup.md                   # ビルド＆セットアップガイド
@@ -55,35 +51,31 @@ TheStations/
 
 ## 2. 完成した主要コアサブシステムの実装仕様
 
-### 2.1. プロシージャルレベル生成 & 空間不可逆性 (`LevelGenerator`)
+### 2.1. ビルド成果物の出力先設定 (Release/ Allocation)
+- Windowsビルド: `Release/windows/TheStations.exe`
+- macOSビルド: `Release/mac/TheStationsApp`
+- Android/Linuxビルド: `Release/android/` / `Release/linux/`
+
+### 2.2. プロシージャルアセット生成 (`graphics/` & `audio/`)
+- **テクスチャ生成 (`TextureGenerator`)**: 512x512 コンクリート汚れ・錆テクスチャ、512x512 タイル血痕スプラッターテクスチャ、256x256 パーリンノイズ フィルムグレインテクスチャをメモリ上で動的生成。
+- **オーディオDSP波形合成 (`AudioDSPGenerator`)**: 電車走行音（低周波ノイズ＋ドップラー周波数変調）、風のうねり音（バンドパスフィルタ付きホワイトノイズ）、館内アナウンス 4音チャイム（PCM 16bit 44.1kHz波形）をリアルタイム合成。
+
+### 2.3. プロシージャルレベル生成 & 空間不可逆性 (`LevelGenerator`)
 - **50種類の基本ステーションカタログ**: 地方の無人駅、大都市地下鉄、ターミナル駅、海外の古びた駅、工事中の坑道まで全50種類のステーションテンプレートを完全定義。
-- **3Dドア位置空間アライメント**: プレイヤーがドアを通過する際、出入口の3Dワールド座標および回転行列（クォータニオン）を精密計算し、暗転やロード画面なしの完全シームレス移動を実現。
-- **空間破棄 (不可逆性)**: ドアを通過して閉めた瞬間、直前のステーションノードを `m_activeSpatialGraph` から削除・メモリ解放。過去のノードIDは破棄リストに登録され、二度と元の空間に戻れない「時空のねじれ」を完全実装。
-- **マルチプレイ独立空間分岐**: 各プレイヤー（最大8名）ごとに専用のノードパスを生成し、同じドアを開けてもフレンドとは異なる別の駅へと繋がる「目の前でフレンドが消える」ホラー演出を実現。
+- **決定性テスト通過**: 同一シード値で完全に同一の空間ノードが再現可能。
+- **空間破棄 (不可逆性)**: ドア通過後、旧ノードのメモリを自動解放。元の空間へは戻れない時空のねじれ構造を実装。
 
-### 2.2. Epic Online Services (EOS) P2P ネットワーク (`EOSNetworkManager`)
-- **5桁ルームコード発行・検索**: 英数字（A-Z, 0-9）からランダムな5桁の合言葉（例: `X7K9P`）を生成し、プライベートロビーの作成および合流検索をサポート。
-- **CRC32 パケット検証付き P2P 通信**: 位置・回転・状態データ（しゃがみ・掴み）を構造体 `P2PTransformPacket` にバイナリパッキングし、CRC32チェックサムで改ざんやパケット化けを検知・同期。
+### 2.4. Epic Online Services (EOS) P2P ネットワーク (`EOSNetworkManager`)
+- **衝突耐性付き5桁ルームコード発行**: 1000回以上の連続生成テストで高エントロピー・無衝突を実証。
+- **CRC32 パケット検証付き P2P 通信**: 位置・状態データを構造体バイナリパッキングし、CRC32チェックサム検証同期。
 
-### 2.3. 生体＆行動データ解析エンジン (`BiometricAnalyzer`)
-- **プライバシー保護型 RAM 解析**: マイク（叫び声の音量・周波数振幅）およびカメラ（表情緊張度・瞬き頻度）のセンサーデータをローカルメモリ（RAM）上でのみ即時解析し、破棄。外部送信やディスク保存は一切行わない。
-- **行動ベースへの完全フォールバック**: カメラやマイクの権限が拒否された場合、視点移動の急激さ（カメラ振り回し）、後退移動比率、しゃがみ・物陰潜伏時間から恐怖度スコア（0.0〜1.0）を自動算出するDDA（Dynamic Difficulty Adjustment）アルゴリズムを実装。
-
-### 2.4. セキュリティ & 海賊版報復トラップエンジン (`EscapeAndAntiCheatEngine`)
-- **FIPS 180-2 準拠 SHA256 バイナリ検証**: 起動時に実行ファイルのバイナリを直接ディスクから読み込み、標準SHA-256ハッシュ値をリアルタイム計算。不一致を検出した場合はダイアログを表示せず静かに `m_isTrappedUser = true` をセット。
-- **詰みトラップ発生ロジック**: クラック版利用者が電車を降りた直後、50%の確率で「案B: 超大量エンティティによる1秒即死ループ」または「案C: 同一初期部屋を無限ループして脱出不能になるトラップ」をトリガー。
-- **到達確率判定**: 通常脱出（1/2560）および特殊レベル「ある駅」（1/5000）の乱数計算エンジンを実装。
-
-### 2.5. エンティティAI & 10分間隠しタイマー (`EntityAI`)
-- **Wander / Investigate / Chase ステートマシン**: 足音徘徊、小物の落下音や足音への調査移動、プレイヤー視認時のRaycast高速追跡を実装。
-- **迷子の館内アナウンスギミック**: アナウンス発生時、エンティティの発生密度倍率（`m_spawnDensityMultiplier`）を跳ね上げ、恐怖演出を強化。
-- **10分間バックグラウンドタイマー**: 「ある駅」到達時、画面UI表示なしで10分タイマーを作動。0分、5分、9分の警告アナウンスを経て、10分経過時に営業終了アナウンスとともに超大量スポーンによる強制即死をトリガー。
+### 2.5. セキュリティ & 海賊版報復トラップエンジン (`EscapeAndAntiCheatEngine`)
+- **FIPS 180-2 準拠 SHA256 バイナリ検証**: 起動時に実行ファイルのバイナリを直接ディスクから読み込み、標準SHA-256ハッシュ値を計算。改ざん検知時に `m_isTrappedUser = true` をセット。
+- **詰みトラップ**: 改ざんフラグ検知時、50%の確率で「案B: 即死ループ」または「案C: 無限空間」を発生。
 
 ---
 
 ## 3. ビルド・動作検証結果
-
-全モジュールは C++20 規格で記述されており、CMake 経由でコンパイルおよびユニットテストが実行可能です。
 
 ```bash
 mkdir build
@@ -99,11 +91,11 @@ ctest --output-on-failure
 2/7 Test #2: test_biometric ...................   Passed    0.00 sec
 3/7 Test #3: test_entity ......................   Passed    0.00 sec
 4/7 Test #4: test_eos .........................   Passed    0.01 sec
-5/7 Test #5: test_level .......................   Passed    0.01 sec
+5/7 Test #5: test_level .......................   Passed    0.00 sec
 6/7 Test #6: test_sanity ......................   Passed    0.00 sec
 7/7 Test #7: test_ui ..........................   Passed    0.00 sec
 
 100% tests passed, 0 tests failed out of 7
 ```
 
-全 7 項目のユニットテスト（レベル生成・空間破壊、EOSロビー、SHA256ハッシュ検証、DDAフォールバック、AI状態遷移、UI画面遷移）が正常に合格することを確認済みです。
+全 7 項目の厳格なテストスイートが正常に合格することを確認済みです。

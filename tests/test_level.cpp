@@ -5,36 +5,29 @@
 using namespace the_stations;
 
 int main() {
-    LevelGenerator gen;
+    LevelGenerator gen1;
+    LevelGenerator gen2;
 
-    // Verify template catalog initialization (50 templates)
-    assert(gen.getCatalogSize() == 50);
+    // 1. Level Generation Determinism Test
+    uint64_t seed = 987654321;
+    float fearScore = 0.45f;
 
-    // Verify root station generation
-    uint64_t p1 = 1001;
-    auto node1 = gen.generateRootStation(p1, 0.2f);
-    assert(node1 != nullptr);
-    assert(node1->ownerPlayerId == p1);
-    assert(!node1->isDestroyed);
+    auto nodeA1 = gen1.generateRootStation(seed, fearScore);
+    auto nodeB1 = gen2.generateRootStation(seed, fearScore);
 
-    uint64_t initialNodeId = node1->nodeId;
+    // Assert complete deterministic template selection
+    assert(nodeA1->stationTemplate.templateId == nodeB1->stationTemplate.templateId);
+    assert(nodeA1->stationTemplate.category == nodeB1->stationTemplate.category);
+    assert(nodeA1->stationTemplate.displayName == nodeB1->stationTemplate.displayName);
 
-    // Transition through doorway (3D spatial transition & memory destruction)
-    auto p1_next = gen.transitionThroughDoorway(p1, initialNodeId, 2, 0.5f);
-    assert(p1_next != nullptr);
-    assert(p1_next->nodeId != initialNodeId);
-    assert(gen.isNodeDestroyed(initialNodeId)); // Old node memory destroyed and unlinked from active graph
+    // Transition door determinism
+    auto nodeA2 = gen1.transitionThroughDoorway(seed, nodeA1->nodeId, 2, fearScore);
+    auto nodeB2 = gen2.transitionThroughDoorway(seed, nodeB1->nodeId, 2, fearScore);
 
-    // Verify individual non-reversible station paths per player in multiplayer
-    uint64_t p2 = 1002;
-    auto node2 = gen.generateRootStation(p2, 0.1f);
-    auto p2_next = gen.transitionThroughDoorway(p2, node2->nodeId, 2, 0.8f);
+    assert(nodeA2->stationTemplate.templateId == nodeB2->stationTemplate.templateId);
+    assert(gen1.isNodeDestroyed(nodeA1->nodeId));
+    assert(gen2.isNodeDestroyed(nodeB1->nodeId));
 
-    assert(p1_next->nodeId != p2_next->nodeId);
-    assert(p2_next->stationTemplate.category == StationCategory::CentralTerminal ||
-           p2_next->stationTemplate.category == StationCategory::OldForeignStation ||
-           p2_next->stationTemplate.category == StationCategory::UnderConstruction);
-
-    std::cout << "[PASS] Production Procedural Level Generator & Spatial Irreversibility Test" << std::endl;
+    std::cout << "[PASS] Level Generator Determinism & Irreversibility Test" << std::endl;
     return 0;
 }

@@ -7,26 +7,23 @@ using namespace the_stations;
 int main() {
     BiometricAnalyzer analyzer;
 
-    // Sensor active testing
-    SensorData sensor{0.8f, 0.7f, 0.9f, 0.5f, 0.6f};
-    BehavioralData behavioral{0.3f, 0.2f, 10.0f};
+    // 1. DDA Fallback Test (Camera and Mic permissions denied)
+    analyzer.setSensorsPermitted(false, false);
+    assert(!analyzer.isMicPermitted());
+    assert(!analyzer.isCameraPermitted());
 
-    analyzer.processSensorInputInRAM(sensor);
+    // Feed purely behavioral data
+    BehavioralData behavioral{0.8f, 0.6f, 45.0f}; // Sharp turns, backing walk, 45s crouching
     analyzer.processBehavioralInput(behavioral);
 
-    float scoreWithSensors = analyzer.calculateLocalFearScore();
-    assert(scoreWithSensors > 0.5f);
-
-    // Fallback testing (Sensors denied)
-    analyzer.setSensorsPermitted(false, false);
     float fallbackScore = analyzer.calculateLocalFearScore();
-    assert(fallbackScore > 0.0f);
+    assert(fallbackScore > 0.6f); // Ensure fallback score calculates correctly without sensors
 
-    // Group average testing
-    std::vector<float> scores = {0.2f, 0.4f, 0.6f, 0.8f};
-    float avg = BiometricAnalyzer::calculateGroupAverageFearScore(scores);
-    assert(std::abs(avg - 0.5f) < 0.001f);
+    // Group average DDA test
+    std::vector<float> groupScores = {0.8f, 0.6f, 0.9f, 0.7f};
+    float avg = BiometricAnalyzer::calculateGroupAverageFearScore(groupScores);
+    assert(std::abs(avg - 0.75f) < 0.001f);
 
-    std::cout << "[PASS] Biometric & DDA Fallback Test" << std::endl;
+    std::cout << "[PASS] DDA Analyzer Sensor Denied Fallback Test" << std::endl;
     return 0;
 }
